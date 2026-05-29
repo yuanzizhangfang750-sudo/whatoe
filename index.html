@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>今天吃啥</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --color-text-primary:#2F2925;
+  --color-text-secondary:#7A7570;
+  --color-background-primary:#FFFFFF;
+  --color-background-secondary:#F5F3EF;
+  --color-border-primary:#D0CBC5;
+  --color-border-secondary:#E5E0DB;
+  --color-border-tertiary:#EDE8E4;
+  --border-radius-md:8px;
+  --border-radius-lg:12px;
+  --font-sans:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{font-family:var(--font-sans);background:#FAF7F4;min-height:100vh}
+.app{max-width:430px;margin:0 auto;padding:1rem .9rem 2.5rem}
+.hero{background:#FFF8F0;border-radius:16px;padding:1.25rem 1.1rem .9rem;margin-bottom:1.1rem;border:0.5px solid #F5C4B3}
+.hero-title{font-size:26px;font-weight:600;color:#712B13;letter-spacing:-.5px}
+.hero-sub{font-size:12.5px;color:#993C1D;margin-top:3px}
+.tabs{display:flex;gap:7px;margin-bottom:1.1rem;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:6px 16px;border-radius:20px;border:0.5px solid var(--color-border-secondary);font-size:13px;cursor:pointer;background:var(--color-background-primary);color:var(--color-text-secondary);transition:all .15s;white-space:nowrap;flex-shrink:0}
+.tab.active{background:#D85A30;color:#fff;border-color:#D85A30;font-weight:500}
+.page{display:none}.page.active{display:block}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
+.filter-label{font-size:12px;color:var(--color-text-secondary);flex-shrink:0}
+.filter-btn{padding:5px 12px;border-radius:20px;border:0.5px solid var(--color-border-secondary);font-size:12px;cursor:pointer;background:var(--color-background-primary);color:var(--color-text-secondary);transition:all .15s}
+.filter-btn.on{background:#FFF0E8;color:#993C1D;border-color:#F0997B;font-weight:500}
+.danmaku-wrap{border-radius:12px;border:0.5px solid #F5C4B3;background:#FFF8F0;overflow:hidden;margin-bottom:1.1rem;height:100px;position:relative}
+.danmaku-track{position:absolute;left:0;right:0;height:33px;overflow:hidden}
+.danmaku-item{position:absolute;white-space:nowrap;font-size:12.5px;font-weight:500;top:50%;transform:translateY(-50%);cursor:pointer;padding:2px 6px;border-radius:6px}
+.danmaku-hint{position:absolute;bottom:4px;right:9px;font-size:10.5px;color:#F0997B;pointer-events:none}
+.deck-area{position:relative;margin-bottom:1rem;user-select:none;-webkit-user-select:none}
+.deck-container{position:relative;height:320px;touch-action:none}
+.deck-ghost{position:absolute;left:0;width:100%;background:#FFFCF7;border:0.5px solid #F0D4C8;border-radius:16px;pointer-events:none;transition:transform .3s ease,opacity .3s ease;}
+.deck-ghost.g2{height:300px;top:12px;transform:scale(.95);opacity:.5;}
+.deck-ghost.g3{height:300px;top:20px;transform:scale(.91);opacity:.25;}
+.deck-top{position:absolute;left:0;top:0;width:100%;min-height:300px;background:#FFFCF7;border:0.5px solid #F0D4C8;border-radius:16px;box-shadow:0 12px 36px rgba(113,43,19,.12),0 3px 10px rgba(113,43,19,.06);transform-origin:50% 90%;will-change:transform;transition:box-shadow .2s ease;touch-action:none;overflow:hidden;cursor:grab;padding:1.2rem 1.1rem 1rem;}
+.deck-top:active{cursor:grabbing}
+.deck-top.is-dragging{box-shadow:0 20px 50px rgba(113,43,19,.18),0 6px 16px rgba(113,43,19,.09);transition:none}
+.deck-top.snap-back{transition:transform .35s cubic-bezier(.25,.46,.45,.94),opacity .35s ease}
+.deck-top.fly-out{transition:transform .38s cubic-bezier(.4,0,.6,1),opacity .35s ease}
+.swipe-overlay{position:absolute;inset:0;border-radius:16px;pointer-events:none;opacity:0;transition:opacity .08s linear;}
+.swipe-overlay.left{background:linear-gradient(135deg,rgba(99,110,120,.22) 0%,transparent 70%)}
+.swipe-overlay.right{background:linear-gradient(225deg,rgba(216,90,48,.22) 0%,transparent 70%)}
+.swipe-hint{display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px;color:var(--color-text-secondary);margin-bottom:.85rem;padding:6px 0;}
+.swipe-hint-arrow{color:#D85A30;font-size:15px}
+.tag-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+.badge-red{background:#FAECE7;color:#993C1D}
+.badge-black{background:#F1EFE8;color:#444441}
+.badge-online{background:#E6F1FB;color:#185FA5}
+.badge-offline{background:#EAF3DE;color:#3B6D11}
+.shop-name{font-size:22px;font-weight:700;color:#2F2925;margin-bottom:8px;line-height:1.25;word-break:break-all}
+.product-pill{display:inline-flex;align-items:center;gap:5px;background:#FFF0E8;border:0.5px solid #F5C4B3;border-radius:20px;padding:4px 13px;font-size:12.5px;color:#712B13;margin-bottom:12px;max-width:100%;line-height:1.4}
+.product-pill.black-pill{background:#F4F7FA;border-color:#C9D9E8;color:#284F73}
+.reasons-title{font-size:11px;color:var(--color-text-secondary);letter-spacing:.4px;margin-bottom:7px;text-transform:uppercase}
+.reason-item{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.reason-item:last-child{border-bottom:none}
+.reason-text{font-size:13px;color:var(--color-text-secondary);flex:1;line-height:1.55}
+.vote-row{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.vote-btn{background:none;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:3px 8px;cursor:pointer;display:flex;align-items:center;gap:3px;font-size:12px;color:var(--color-text-secondary)}
+.vote-btn[disabled]{opacity:.7;cursor:default}
+.vote-btn.voted{background:#FFF0E8;color:#993C1D;border-color:#F0997B}
+.add-comment{display:flex;gap:7px;margin-top:10px;border-top:0.5px solid var(--color-border-tertiary);padding-top:10px}
+.add-comment input{flex:1;font-size:13px;padding:7px 11px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);min-width:0}
+.add-comment button{padding:7px 13px;border-radius:var(--border-radius-md);background:#D85A30;color:#fff;border:none;font-size:13px;cursor:pointer;font-weight:500;flex-shrink:0}
+.detail-card{background:#FFFCF7;border:0.5px solid #F0D4C8;border-radius:16px;padding:1.2rem 1.1rem 1rem;margin-bottom:1rem;box-shadow:0 4px 14px rgba(113,43,19,.07)}
+.detail-card.from-danmaku::before{content:'来自弹幕点击';display:block;font-size:11px;color:#D85A30;margin-bottom:8px}
+.detail-card.black-card-style{border-left:3px solid #8a8880}
+.submit-wrap{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem;margin-top:.5rem}
+.submit-head{font-size:14.5px;font-weight:500;color:var(--color-text-primary);margin-bottom:10px}
+.submit-toggle{display:flex;gap:8px;margin-bottom:10px}
+.submit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.submit-grid input,.submit-wrap select,.submit-wrap textarea{width:100%;font-size:13px;padding:8px 11px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary)}
+.submit-wrap textarea{min-height:68px;resize:vertical;margin-bottom:9px;line-height:1.5;margin-top:8px}
+.submit-actions{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.submit-actions button{padding:8px 16px;border-radius:var(--border-radius-md);background:#D85A30;color:#fff;border:none;font-size:13px;cursor:pointer;font-weight:500}
+.submit-status{font-size:12px;color:var(--color-text-secondary)}
+.search-row{display:flex;gap:8px;margin-bottom:1.1rem}
+.search-row input{flex:1;font-size:14px;padding:9px 13px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary)}
+.search-row button{padding:9px 16px;border-radius:var(--border-radius-md);background:#D85A30;color:#fff;border:none;font-size:13px;cursor:pointer;font-weight:500}
+.search-card{background:#FFFCF7;border:0.5px solid #F0D4C8;border-radius:14px;padding:1rem 1rem .9rem;margin-bottom:.8rem}
+.search-card.black-style{border-left:3px solid #8a8880}
+.rank-tabs{display:flex;gap:8px;margin-bottom:1rem}
+.rank-tab{padding:6px 15px;border-radius:20px;border:0.5px solid var(--color-border-secondary);font-size:13px;cursor:pointer;background:var(--color-background-primary);color:var(--color-text-secondary)}
+.rank-tab.active{background:#D85A30;color:#fff;border-color:#D85A30}
+.rank-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:.5rem .9rem}
+.rank-item{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.rank-item:last-child{border-bottom:none}
+.rank-num{font-size:16px;font-weight:600;color:var(--color-text-secondary);width:24px;flex-shrink:0;text-align:center}
+.rank-num.top1{color:#D85A30;font-size:19px}
+.rank-num.top2{color:#BA7517}
+.rank-num.top3{color:#854F0B}
+.rank-name{font-size:14.5px;font-weight:500;color:var(--color-text-primary)}
+.rank-meta{font-size:11.5px;color:var(--color-text-secondary);margin-top:2px}
+.rank-score{font-size:13.5px;font-weight:500;color:var(--color-text-secondary);display:flex;align-items:center;gap:3px;flex-shrink:0}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2F2925;color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{opacity:1}
+/* 管理员审核面板 */
+.admin-panel{background:#FFF8F0;border:1px solid #F5C4B3;border-radius:12px;padding:1rem;margin-top:1rem}
+.admin-panel h3{font-size:14px;font-weight:600;color:#712B13;margin-bottom:10px}
+.admin-item{background:#fff;border:0.5px solid #F0D4C8;border-radius:8px;padding:10px;margin-bottom:8px}
+.admin-item-name{font-size:14px;font-weight:500;color:#2F2925;margin-bottom:4px}
+.admin-item-meta{font-size:12px;color:#7A7570;margin-bottom:8px}
+.admin-item-reason{font-size:12px;color:#444;background:#FAF7F4;border-radius:6px;padding:6px 8px;margin-bottom:8px}
+.admin-btns{display:flex;gap:8px}
+.admin-btn{padding:5px 14px;border-radius:8px;border:none;font-size:12px;cursor:pointer;font-weight:500}
+.admin-btn.approve{background:#D85A30;color:#fff}
+.admin-btn.reject{background:#F1EFE8;color:#444}
+.loading{text-align:center;padding:2rem;font-size:14px;color:var(--color-text-secondary)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hero">
+    <div class="hero-title">今天吃啥？🍜</div>
+    <div class="hero-sub">之我在北语吃什么</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchPage('random',this)"><i class="ti ti-cards"></i> 随机推荐</div>
+    <div class="tab" onclick="switchPage('search',this)"><i class="ti ti-search"></i> 搜索</div>
+    <div class="tab" onclick="switchPage('rank',this)"><i class="ti ti-trophy"></i> 排行榜</div>
+    <div class="tab" onclick="switchPage('admin',this)" id="admin-tab" style="display:none"><i class="ti ti-shield"></i> 审核</div>
+  </div>
+
+  <!-- 随机推荐 -->
+  <div class="page active" id="page-random">
+    <div class="filter-row">
+      <span class="filter-label">渠道：</span>
+      <button class="filter-btn on" id="fl-all" onclick="setFilter('loc','all',['fl-all','fl-on','fl-off'],this)">全部</button>
+      <button class="filter-btn" id="fl-on" onclick="setFilter('loc','online',['fl-all','fl-on','fl-off'],this)">线上外卖</button>
+      <button class="filter-btn" id="fl-off" onclick="setFilter('loc','offline',['fl-all','fl-on','fl-off'],this)">线下到店</button>
+    </div>
+    <div class="danmaku-wrap" id="danmaku-wrap">
+      <div class="danmaku-hint"><i class="ti ti-hand-click" style="font-size:10.5px"></i> 点击弹幕查看详情</div>
+    </div>
+    <div class="swipe-hint" aria-hidden="true">
+      <span class="swipe-hint-arrow">←</span>
+      <span>左右滑动换一家</span>
+      <span class="swipe-hint-arrow">→</span>
+    </div>
+    <div class="deck-area">
+      <div class="deck-container" id="deck-container">
+        <div class="deck-ghost g3" id="ghost3"></div>
+        <div class="deck-ghost g2" id="ghost2"></div>
+        <div class="deck-top" id="deck-top">
+          <div class="swipe-overlay left" id="overlay-left"></div>
+          <div class="swipe-overlay right" id="overlay-right"></div>
+          <div id="deck-content"><div class="loading">加载中…</div></div>
+        </div>
+      </div>
+    </div>
+    <div id="danmaku-detail"></div>
+    <div class="submit-wrap">
+      <div class="submit-head">投稿新店铺</div>
+      <div style="font-size:12px;color:#993C1D;margin-bottom:10px;background:#FFF0E8;padding:6px 10px;border-radius:8px">📋 投稿后需审核才会显示，感谢你的贡献！</div>
+      <div class="submit-toggle">
+        <button class="filter-btn on" id="submit-red" onclick="setSubmitType('red',this)">红榜推荐</button>
+        <button class="filter-btn" id="submit-black" onclick="setSubmitType('black',this)">黑榜避雷</button>
+      </div>
+      <div class="submit-grid">
+        <input type="text" id="submit-name" placeholder="店名" />
+        <input type="text" id="submit-product" placeholder="推荐 / 避雷菜品" />
+      </div>
+      <select id="submit-loc">
+        <option value="online">线上外卖</option>
+        <option value="offline">线下到店</option>
+      </select>
+      <textarea id="submit-reason" placeholder="推荐 / 避雷理由（可选）"></textarea>
+      <div class="submit-actions">
+        <span class="submit-status" id="submit-status"></span>
+        <button onclick="addShop()">投稿</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 搜索 -->
+  <div class="page" id="page-search">
+    <div class="search-row">
+      <input type="text" id="search-input" placeholder="店名、菜品、关键词…" onkeydown="if(event.key==='Enter')doSearch()" />
+      <button onclick="doSearch()">搜索</button>
+    </div>
+    <div id="search-result"><div style="font-size:14px;color:var(--color-text-secondary);padding:2rem 0;text-align:center">输入关键词开始搜索</div></div>
+  </div>
+
+  <!-- 排行榜 -->
+  <div class="page" id="page-rank">
+    <div class="rank-tabs">
+      <button class="rank-tab active" onclick="switchRank(this,'likes')"><i class="ti ti-thumb-up"></i> 红榜获赞</button>
+      <button class="rank-tab" onclick="switchRank(this,'dislikes')"><i class="ti ti-thumb-down"></i> 黑榜踩最多</button>
+    </div>
+    <div class="rank-card" id="rank-list"><div class="loading">加载中…</div></div>
+  </div>
+
+  <!-- 管理员审核 -->
+  <div class="page" id="page-admin">
+    <div class="admin-panel">
+      <h3><i class="ti ti-shield"></i> 待审核投稿</h3>
+      <div id="admin-list"><div class="loading">加载中…</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ====== SUPABASE CONFIG ====== */
+const SUPABASE_URL = 'https://jaokuilqswvphsyuxxyp.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imphb2t1aWxxc3d2cGhzeXV4eHlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDQ1NzAsImV4cCI6MjA5NTYyMDU3MH0.B2eSlSlyoaYi_pZoWqZtfZk99zzVz_6MP06Jtd7SYdI';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ====== ADMIN — 把你的 Supabase user id 填进来（注册后在 Auth > Users 里找） ====== */
+const ADMIN_USER_ID = 'YOUR_USER_ID_HERE'; // 可选：填入 Supabase Auth 里的管理员 user id
+
+/* ====== STATE ====== */
+let shopData = [];
+let votes = {}, filters = { loc: 'all' }, currentRankMode = 'likes', submitType = 'red';
+let danmakuItems = [], danmakuIdx = 0;
+let deck = [], deckIdx = 0;
+let currentUser = null;
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ====== AUTH (匿名登录，用于标记投票) ====== */
+async function initAuth(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(session){
+    currentUser = session.user;
+  } else {
+    const {data} = await sb.auth.signInAnonymously();
+    currentUser = data?.user;
+  }
+  // 如果是管理员显示审核 tab
+  if(currentUser && currentUser.id === ADMIN_USER_ID){
+    document.getElementById('admin-tab').style.display='';
+  }
+  // 加载本地 votes
+  votes = JSON.parse(localStorage.getItem('votes_v1')||'{}');
+}
+
+/* ====== LOAD SHOPS FROM SUPABASE ====== */
+async function loadShops(){
+  const {data, error} = await sb
+    .from('shops')
+    .select('*, reasons(*), comments(*)')
+    .eq('status','approved')
+    .order('created_at', {ascending: false});
+  if(error){console.error(error);showToast('数据加载失败，请检查 Supabase 表和权限');return;}
+  shopData = data.map(s=>({
+    id: s.id,
+    name: s.name,
+    type: s.type,
+    loc: s.loc,
+    product: s.product,
+    reasons: (s.reasons||[]).map(r=>({id:r.id,text:r.text,likes:r.likes||0,dislikes:r.dislikes||0})),
+    comments: (s.comments||[]).filter(c=>!c.status||c.status==='approved').map(c=>c.text),
+  }));
+  rebuildDeck();
+  rebuildDanmakuItems();
+  initDanmaku();
+  renderRank(currentRankMode);
+}
+
+/* ====== CARD HTML ====== */
+function renderReasons(shop){
+  const allR=[
+    ...shop.reasons,
+    ...(shop.comments||[]).map((c,i)=>({id:'cx'+shop.id+'_'+i,text:c,likes:0,dislikes:0}))
+  ];
+  if(!allR.length)return`<div style="font-size:13px;color:var(--color-text-secondary);font-style:italic;padding:6px 0">暂无评价，来补充第一条吧</div>`;
+  return allR.map(r=>{
+    const k=shop.id+'_'+r.id;
+    const l=(votes[k+'_l']||0)+r.likes;
+    const d=(votes[k+'_d']||0)+r.dislikes;
+    const picked=votes[k+'_choice'];
+    return`<div class="reason-item">
+      <span class="reason-text">${esc(r.text)}</span>
+      <div class="vote-row">
+        <button class="vote-btn ${picked==='l'?'voted':''}" onclick="vote(${shop.id},'${r.id}','l')" ${picked?'disabled':''}><i class="ti ti-thumb-up" style="font-size:12px"></i> ${l}</button>
+        <button class="vote-btn ${picked==='d'?'voted':''}" onclick="vote(${shop.id},'${r.id}','d')" ${picked?'disabled':''}><i class="ti ti-thumb-down" style="font-size:12px"></i> ${d}</button>
+      </div></div>`;
+  }).join('');
+}
+
+function cardInnerHTML(shop){
+  const isRed=shop.type==='red';
+  const prod=shop.product&&shop.product!=='店铺整体'
+    ?`<div class="product-pill ${isRed?'':'black-pill'}"><i class="ti ti-${isRed?'star':'alert-triangle'}" style="font-size:12px"></i>${isRed?'推荐':'避雷'}：${esc(shop.product)}</div>`:'';
+  return`
+    <div class="tag-row">
+      <span class="badge ${isRed?'badge-red':'badge-black'}">${isRed?'红榜':'黑榜'}</span>
+      <span class="badge ${shop.loc==='online'?'badge-online':'badge-offline'}">${shop.loc==='online'?'线上外卖':'线下到店'}</span>
+    </div>
+    <div class="shop-name">${esc(shop.name)}</div>
+    ${prod}
+    <div class="reasons-title">${isRed?'推荐理由':'避雷理由'}</div>
+    ${renderReasons(shop)}
+    <div class="add-comment">
+      <input type="text" placeholder="补充评价…" onkeydown="if(event.key==='Enter')addComment(${shop.id},this)"/>
+      <button onclick="addComment(${shop.id},this)">发布</button>
+    </div>`;
+}
+
+/* ====== DECK ====== */
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function getPool(){return shopData.filter(s=>s.type==='red'&&(filters.loc==='all'||s.loc===filters.loc));}
+
+function rebuildDeck(){
+  deck=shuffle(getPool());deckIdx=0;renderTopCard();
+}
+
+function renderTopCard(){
+  const shop=deck[deckIdx%Math.max(deck.length,1)];
+  const contentEl=document.getElementById('deck-content');
+  const topEl=document.getElementById('deck-top');
+  if(!shop||!deck.length){contentEl.innerHTML='<div style="text-align:center;padding:2rem;color:var(--color-text-secondary)">没有符合条件的店铺</div>';return;}
+  contentEl.innerHTML=cardInnerHTML(shop);
+  topEl.style.transform='';topEl.style.opacity='';
+  document.getElementById('overlay-left').style.opacity='0';
+  document.getElementById('overlay-right').style.opacity='0';
+}
+
+function advanceDeck(){deckIdx=(deckIdx+1)%Math.max(deck.length,1);}
+
+/* ====== DRAG ====== */
+const topEl=document.getElementById('deck-top');
+let startX=0,startY=0,curX=0,isDragging=false,dragLocked=false;
+const SWIPE_THRESHOLD=80,ROT_MAX=18;
+
+function onDragStart(e){
+  if(e.target.closest('input,button,textarea,select'))return;
+  isDragging=true;dragLocked=false;
+  const pt=e.touches?e.touches[0]:e;
+  startX=pt.clientX;startY=pt.clientY;curX=0;
+  topEl.classList.add('is-dragging');
+  topEl.classList.remove('snap-back','fly-out');
+}
+function onDragMove(e){
+  if(!isDragging)return;
+  const pt=e.touches?e.touches[0]:e;
+  const dx=pt.clientX-startX,dy=pt.clientY-startY;
+  if(!dragLocked){
+    if(Math.abs(dx)>Math.abs(dy)+4)dragLocked='h';
+    else if(Math.abs(dy)>Math.abs(dx)+4){dragLocked='v';isDragging=false;topEl.classList.remove('is-dragging');return;}
+    else return;
+  }
+  if(dragLocked!=='h')return;
+  if(e.cancelable)e.preventDefault();
+  curX=dx;
+  topEl.style.transform=`translateX(${dx}px) rotate(${(dx/window.innerWidth)*ROT_MAX}deg)`;
+  const pct=Math.min(Math.abs(dx)/SWIPE_THRESHOLD,1);
+  if(dx<0){document.getElementById('overlay-left').style.opacity=String(pct*.85);document.getElementById('overlay-right').style.opacity='0';}
+  else{document.getElementById('overlay-right').style.opacity=String(pct*.85);document.getElementById('overlay-left').style.opacity='0';}
+  document.getElementById('ghost2').style.transform=`translateY(${18-pct*10}px) scale(${.955+pct*.03})`;
+}
+function onDragEnd(){
+  if(!isDragging)return;
+  isDragging=false;topEl.classList.remove('is-dragging');
+  document.getElementById('ghost2').style.transform='';
+  if(Math.abs(curX)>=SWIPE_THRESHOLD){flyOut(curX>0?'right':'left');}
+  else{
+    topEl.classList.add('snap-back');topEl.style.transform='';topEl.style.opacity='';
+    document.getElementById('overlay-left').style.opacity='0';document.getElementById('overlay-right').style.opacity='0';
+    topEl.addEventListener('transitionend',()=>topEl.classList.remove('snap-back'),{once:true});
+  }
+  curX=0;
+}
+function flyOut(dir){
+  const flyX=dir==='right'?window.innerWidth*1.3:-window.innerWidth*1.3;
+  topEl.classList.add('fly-out');
+  topEl.style.transform=`translateX(${flyX}px) rotate(${dir==='right'?ROT_MAX:-ROT_MAX}deg)`;
+  topEl.style.opacity='0';
+  topEl.addEventListener('transitionend',()=>{topEl.classList.remove('fly-out');advanceDeck();renderTopCard();},{once:true});
+}
+topEl.addEventListener('mousedown',onDragStart);
+topEl.addEventListener('touchstart',onDragStart,{passive:true});
+window.addEventListener('mousemove',onDragMove);
+window.addEventListener('touchmove',onDragMove,{passive:false});
+window.addEventListener('mouseup',onDragEnd);
+window.addEventListener('touchend',onDragEnd);
+
+/* ====== VOTE (存 Supabase) ====== */
+async function vote(shopId,rId,type){
+  const base=shopId+'_'+rId;
+  if(votes[base+'_choice'])return;
+  votes[base+'_'+type]=(votes[base+'_'+type]||0)+1;
+  votes[base+'_choice']=type;
+  localStorage.setItem('votes_v1',JSON.stringify(votes));
+  // 更新数据库
+  if(String(rId).startsWith('cx'))return; // 是本地评论，跳过
+  const field=type==='l'?'likes':'dislikes';
+  const shop=shopData.find(s=>s.id===shopId);
+  const reason=shop?.reasons.find(r=>r.id==rId);
+  if(reason){
+    const {error}=await sb.rpc('increment_reason_vote',{reason_id:Number(rId),vote_type:type});
+    if(error)console.error(error);
+  }
+  refreshCards();
+}
+
+/* ====== ADD COMMENT (存 Supabase) ====== */
+async function addComment(shopId,trigger){
+  const inp=trigger?.closest('.add-comment')?.querySelector('input');
+  if(!inp)return;
+  const txt=inp.value.trim();if(!txt)return;
+  inp.value='';
+  const {error}=await sb.from('comments').insert({shop_id:shopId,text:txt,status:'approved'});
+  if(error){showToast('发布失败，请重试');return;}
+  // 本地也更新
+  const shop=shopData.find(s=>s.id===shopId);
+  if(shop){if(!shop.comments)shop.comments=[];shop.comments.push(txt);}
+  showToast('评价已发布 ✓');
+  refreshCards();
+}
+
+function refreshCards(){
+  const shop=deck[deckIdx%Math.max(deck.length,1)];
+  if(shop)document.getElementById('deck-content').innerHTML=cardInnerHTML(shop);
+  const dd=document.getElementById('danmaku-detail');
+  if(dd&&dd._shopId){const s=shopData.find(x=>x.id===dd._shopId);if(s)renderDanmakuDetail(s);}
+  const sr=document.getElementById('search-result');
+  if(sr&&sr.dataset.query)doSearch();
+  renderRank(currentRankMode);
+}
+
+/* ====== DANMAKU DETAIL ====== */
+function renderDanmakuDetail(shop){
+  const el=document.getElementById('danmaku-detail');
+  el._shopId=shop.id;
+  const isRed=shop.type==='red';
+  const prod=shop.product&&shop.product!=='店铺整体'
+    ?`<div class="product-pill ${isRed?'':'black-pill'}" style="margin-bottom:10px"><i class="ti ti-${isRed?'star':'alert-triangle'}" style="font-size:12px"></i>${isRed?'推荐':'避雷'}：${esc(shop.product)}</div>`:'';
+  el.innerHTML=`<div class="detail-card from-danmaku ${isRed?'':'black-card-style'}">
+    <div class="tag-row" style="margin-bottom:8px">
+      <span class="badge ${isRed?'badge-red':'badge-black'}">${isRed?'红榜':'黑榜'}</span>
+      <span class="badge ${shop.loc==='online'?'badge-online':'badge-offline'}">${shop.loc==='online'?'线上外卖':'线下到店'}</span>
+    </div>
+    <div class="shop-name">${esc(shop.name)}</div>${prod}
+    <div class="reasons-title">${isRed?'推荐理由':'避雷理由'}</div>
+    ${renderReasons(shop)}
+    <div class="add-comment">
+      <input type="text" placeholder="补充评价…" onkeydown="if(event.key==='Enter')addComment(${shop.id},this)"/>
+      <button onclick="addComment(${shop.id},this)">发布</button>
+    </div></div>`;
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function showShopFromDanmaku(shopId){
+  const shop=shopData.find(s=>s.id===shopId);
+  if(shop)renderDanmakuDetail(shop);
+}
+
+/* ====== SUBMIT SHOP ====== */
+function setSubmitType(type,btn){
+  submitType=type;
+  document.querySelectorAll('.submit-toggle .filter-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+async function addShop(){
+  const name=document.getElementById('submit-name').value.trim();
+  const product=document.getElementById('submit-product').value.trim();
+  const loc=document.getElementById('submit-loc').value;
+  const reason=document.getElementById('submit-reason').value.trim();
+  const statusEl=document.getElementById('submit-status');
+  if(!name){statusEl.textContent='先填店名';return;}
+  statusEl.textContent='提交中…';
+  // 插入 shop（status 默认 pending）
+  const {data:shopRow,error:e1}=await sb.from('shops')
+    .insert({name,type:submitType,loc,product:product||'店铺整体',status:'pending'})
+    .select().single();
+  if(e1){statusEl.textContent='提交失败，请重试';return;}
+  // 插入 reason
+  if(reason){
+    await sb.from('reasons').insert({shop_id:shopRow.id,text:reason});
+  } else {
+    await sb.from('reasons').insert({shop_id:shopRow.id,text:submitType==='red'?'被同学推荐':'被同学避雷'});
+  }
+  document.getElementById('submit-name').value='';
+  document.getElementById('submit-product').value='';
+  document.getElementById('submit-reason').value='';
+  statusEl.textContent='';
+  showToast('投稿成功！审核后会显示 ✓');
+}
+
+/* ====== FILTER ====== */
+function setFilter(key,val,ids,btn){
+  filters[key]=val;
+  ids.forEach(id=>document.getElementById(id).classList.remove('on'));
+  btn.classList.add('on');
+  rebuildDeck();
+}
+
+/* ====== SEARCH ====== */
+function doSearch(){
+  const val=document.getElementById('search-input').value.trim().toLowerCase();
+  const res=document.getElementById('search-result');
+  res.dataset.query=val;
+  if(!val){res.innerHTML='<div style="font-size:14px;color:var(--color-text-secondary);padding:2rem 0;text-align:center">输入关键词开始搜索</div>';return;}
+  const found=shopData.filter(s=>
+    s.name.toLowerCase().includes(val)||s.product.toLowerCase().includes(val)||
+    s.reasons.some(r=>r.text.toLowerCase().includes(val))||
+    (s.comments||[]).some(c=>c.toLowerCase().includes(val))
+  );
+  if(!found.length){res.innerHTML=`<div style="font-size:14px;color:var(--color-text-secondary);padding:2rem 0;text-align:center">没有找到"${esc(val)}"</div>`;return;}
+  res.innerHTML=found.map(s=>{
+    const isRed=s.type==='red';
+    const prod=s.product&&s.product!=='店铺整体'?`<div class="product-pill ${isRed?'':'black-pill'}" style="margin-bottom:10px"><i class="ti ti-${isRed?'star':'alert-triangle'}" style="font-size:12px"></i>${isRed?'推荐':'避雷'}：${esc(s.product)}</div>`:'';
+    return`<div class="search-card ${isRed?'':'black-style'}">
+      <div class="tag-row" style="margin-bottom:8px">
+        <span class="badge ${isRed?'badge-red':'badge-black'}">${isRed?'红榜':'黑榜'}</span>
+        <span class="badge ${s.loc==='online'?'badge-online':'badge-offline'}">${s.loc==='online'?'线上外卖':'线下到店'}</span>
+      </div>
+      <div class="shop-name">${esc(s.name)}</div>${prod}
+      <div class="reasons-title">${isRed?'推荐理由':'避雷理由'}</div>
+      ${renderReasons(s)}
+      <div class="add-comment">
+        <input type="text" placeholder="补充评价…" onkeydown="if(event.key==='Enter')addComment(${s.id},this)"/>
+        <button onclick="addComment(${s.id},this)">发布</button>
+      </div></div>`;
+  }).join('');
+}
+
+/* ====== RANK ====== */
+function switchRank(el,mode){
+  document.querySelectorAll('.rank-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');currentRankMode=mode;renderRank(mode);
+}
+function renderRank(mode){
+  const isLike=mode==='likes';
+  const scored=shopData.filter(s=>isLike?s.type==='red':s.type==='black')
+    .map(s=>({...s,score:s.reasons.reduce((sum,r)=>{
+      const k=s.id+'_'+r.id+'_'+(isLike?'l':'d');
+      return sum+r[isLike?'likes':'dislikes']+(votes[k]||0);
+    },0)})).sort((a,b)=>b.score-a.score);
+  document.getElementById('rank-list').innerHTML=scored.length?scored.map((s,i)=>`
+    <div class="rank-item">
+      <div class="rank-num ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div class="rank-name">${esc(s.name)}</div>
+        <div class="rank-meta">${s.loc==='online'?'线上':'线下'} · ${esc(s.product)}</div>
+      </div>
+      <div class="rank-score"><i class="ti ti-${isLike?'thumb-up':'thumb-down'}" style="font-size:14px"></i> ${s.score}</div>
+    </div>`).join(''):'<div class="loading">暂无数据</div>';
+}
+
+/* ====== ADMIN 审核 ====== */
+async function loadAdminList(){
+  const {data,error}=await sb.from('shops')
+    .select('*, reasons(*)')
+    .eq('status','pending')
+    .order('created_at',{ascending:true});
+  if(error){document.getElementById('admin-list').innerHTML='加载失败';return;}
+  if(!data.length){document.getElementById('admin-list').innerHTML='<div style="font-size:13px;color:var(--color-text-secondary);padding:1rem 0">暂无待审核投稿 🎉</div>';return;}
+  document.getElementById('admin-list').innerHTML=data.map(s=>`
+    <div class="admin-item" id="admin-item-${s.id}">
+      <div class="admin-item-name">${esc(s.name)}（${s.type==='red'?'红榜':'黑榜'} · ${s.loc==='online'?'线上':'线下'}）</div>
+      <div class="admin-item-meta">菜品：${esc(s.product)}</div>
+      ${(s.reasons||[]).map(r=>`<div class="admin-item-reason">${esc(r.text)}</div>`).join('')}
+      <div class="admin-btns">
+        <button class="admin-btn approve" onclick="reviewShop(${s.id},'approved')">✓ 通过</button>
+        <button class="admin-btn reject" onclick="reviewShop(${s.id},'rejected')">✗ 拒绝</button>
+      </div>
+    </div>`).join('');
+}
+
+async function reviewShop(shopId,status){
+  await sb.from('shops').update({status}).eq('id',shopId);
+  document.getElementById('admin-item-'+shopId)?.remove();
+  showToast(status==='approved'?'已通过 ✓':'已拒绝');
+  if(status==='approved')loadShops();
+}
+
+/* ====== PAGE SWITCH ====== */
+function switchPage(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='rank')renderRank(currentRankMode);
+  if(name==='admin')loadAdminList();
+}
+
+/* ====== DANMAKU ====== */
+function rebuildDanmakuItems(){
+  danmakuItems=shuffle(shopData.flatMap(s=>s.reasons.map(r=>({shopId:s.id,shopName:s.name,text:r.text,type:s.type,loc:s.loc}))));
+  danmakuIdx=0;
+}
+function nextDanmakuItem(){
+  if(!danmakuItems.length)rebuildDanmakuItems();
+  if(!danmakuItems.length)return null;
+  if(danmakuIdx>=danmakuItems.length){danmakuItems=shuffle(danmakuItems);danmakuIdx=0;}
+  return danmakuItems[danmakuIdx++];
+}
+let danmakuInited=false;
+function initDanmaku(){
+  if(danmakuInited)return;danmakuInited=true;
+  const wrap=document.getElementById('danmaku-wrap');
+  for(let t=0;t<3;t++){
+    const tr=document.createElement('div');tr.className='danmaku-track';tr.style.top=(t*33)+'px';
+    wrap.appendChild(tr);
+  }
+  const tracks=wrap.querySelectorAll('.danmaku-track');
+  function spawnOne(ti){
+    const item=nextDanmakuItem();if(!item)return;
+    const el=document.createElement('div');el.className='danmaku-item';
+    el.textContent=`${item.shopName}（${item.loc==='online'?'线上':'线下'}）${item.text}`;
+    el.style.color=item.type==='red'?'#993C1D':'#444441';
+    el.dataset.shopId=item.shopId;
+    el.addEventListener('click',()=>showShopFromDanmaku(parseInt(el.dataset.shopId)));
+    tracks[ti].appendChild(el);
+    el.style.left='105%';
+    const dur=13000+ti*2000;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      el.style.transition=`transform ${dur}ms linear`;
+      el.style.transform=`translateX(-${window.innerWidth+el.offsetWidth+60}px)`;
+    }));
+    el.addEventListener('transitionend',()=>{el.remove();setTimeout(()=>spawnOne(ti),500+Math.random()*1200);});
+  }
+  for(let t=0;t<3;t++)setTimeout(()=>spawnOne(t),t*1800);
+}
+
+/* ====== INIT ====== */
+/* ====== REALTIME AUTO REFRESH ====== */
+let reloadTimer = null, realtimeChannel = null;
+function scheduleReload(){
+  clearTimeout(reloadTimer);
+  reloadTimer = setTimeout(()=>loadShops(),350);
+}
+function subscribeRealtime(){
+  if(realtimeChannel)return;
+  realtimeChannel = sb.channel('chishaone-public-updates')
+    .on('postgres_changes',{event:'*',schema:'public',table:'shops'},scheduleReload)
+    .on('postgres_changes',{event:'*',schema:'public',table:'reasons'},scheduleReload)
+    .on('postgres_changes',{event:'*',schema:'public',table:'comments'},scheduleReload)
+    .subscribe();
+}
+
+async function init(){
+  await initAuth();
+  await loadShops();
+  subscribeRealtime();
+}
+init();
+</script>
+</body>
+</html>

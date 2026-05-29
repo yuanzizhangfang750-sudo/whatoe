@@ -1,0 +1,9 @@
+﻿*.xlsx
+chishaone_v3.html
+data_update_v4.html
+supabase_schema.sql
+README_DEPLOY.md
+scripts/
+backup-before-db-v4-*
+.env
+__pycache__/
