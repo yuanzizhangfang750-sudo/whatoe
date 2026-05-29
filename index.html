@@ -482,7 +482,7 @@ async function addShop(){
   statusEl.textContent='提交中…';
   // 插入 shop（status 默认 pending）
   const {data:shopRow,error:e1}=await sb.from('shops')
-    .insert({name,type:submitType,loc,product:product||'店铺整体',status:'pending'})
+    .insert({name,type:submitType,loc,product:product||'店铺整体',status:'approved'})
     .select().single();
   if(e1){statusEl.textContent='提交失败，请重试';return;}
   // 插入 reason
