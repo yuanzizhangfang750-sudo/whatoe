@@ -102,7 +102,10 @@ html,body{font-family:var(--font-sans);background:#FAF7F4;min-height:100vh}
 .rank-num.top3{color:#854F0B}
 .rank-name{font-size:14.5px;font-weight:500;color:var(--color-text-primary)}
 .rank-meta{font-size:11.5px;color:var(--color-text-secondary);margin-top:2px}
-.rank-score{font-size:13.5px;font-weight:500;color:var(--color-text-secondary);display:flex;align-items:center;gap:3px;flex-shrink:0}
+.rank-score{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.rank-vote{display:inline-flex;align-items:center;gap:3px;font-size:12.5px;color:var(--color-text-secondary);background:#F7F3EF;border:0.5px solid #E5D8CE;border-radius:999px;padding:3px 7px}
+.rank-vote.primary{background:#FFF0E8;color:#993C1D;border-color:#F0997B;font-weight:600}
+.rank-vote.down.primary{background:#F4F7FA;color:#284F73;border-color:#C9D9E8}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2F2925;color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap}
 .toast.show{opacity:1}
 /* 管理员审核面板 */
@@ -652,10 +655,17 @@ function switchRank(el,mode){
 function renderRank(mode){
   const isLike=mode==='likes';
   const scored=shopData.filter(s=>isLike?s.type==='red':s.type==='black')
-    .map(s=>({...s,score:s.reasons.reduce((sum,r)=>{
-      const k=s.id+'_'+r.id+'_'+(isLike?'l':'d');
-      return sum+r[isLike?'likes':'dislikes']+(votes[k]||0);
-    },0)})).sort((a,b)=>b.score-a.score);
+    .map(s=>{
+      const likes=s.reasons.reduce((sum,r)=>{
+        const k=s.id+'_'+r.id+'_l';
+        return sum+r.likes+(votes[k]||0);
+      },0);
+      const dislikes=s.reasons.reduce((sum,r)=>{
+        const k=s.id+'_'+r.id+'_d';
+        return sum+r.dislikes+(votes[k]||0);
+      },0);
+      return {...s,likes,dislikes,score:isLike?likes:dislikes};
+    }).sort((a,b)=>b.score-a.score);
   document.getElementById('rank-list').innerHTML=scored.length?scored.map((s,i)=>`
     <div class="rank-item">
       <div class="rank-num ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${i+1}</div>
@@ -663,7 +673,10 @@ function renderRank(mode){
         <div class="rank-name">${esc(s.name)}</div>
         <div class="rank-meta">${s.loc==='online'?'线上':'线下'} · ${esc(s.product)}</div>
       </div>
-      <div class="rank-score"><i class="ti ti-${isLike?'thumb-up':'thumb-down'}" style="font-size:14px"></i> ${s.score}</div>
+      <div class="rank-score">
+        <span><i class="ti ti-thumb-up" style="font-size:14px"></i> ${s.likes}</span>
+        <span><i class="ti ti-thumb-down" style="font-size:14px"></i> ${s.dislikes}</span>
+      </div>
     </div>`).join(''):'<div class="loading">暂无数据</div>';
 }
 
