@@ -117,13 +117,121 @@ html,body{font-family:var(--font-sans);background:#FAF7F4;min-height:100vh}
 .admin-btn.approve{background:#D85A30;color:#fff}
 .admin-btn.reject{background:#F1EFE8;color:#444}
 .loading{text-align:center;padding:2rem;font-size:14px;color:var(--color-text-secondary)}
+/* UI polish: centered title + focused swipe card */
+html,body{
+  background:linear-gradient(180deg,#F7FAF6 0%,#FFF8F1 42%,#FAF7F4 100%);
+}
+
+.app{
+  padding-top:1.15rem;
+}
+
+.hero{
+  text-align:center;
+  background:#FFFFFF;
+  border:1px solid #F1D5C8;
+  border-radius:18px;
+  padding:1.25rem 1rem 1rem;
+  box-shadow:0 10px 30px rgba(113,43,19,.08);
+}
+
+.hero-title{
+  font-size:29px;
+  font-weight:750;
+  color:#2F2925;
+  letter-spacing:0;
+}
+
+.hero-sub{
+  display:inline-flex;
+  margin-top:8px;
+  padding:4px 12px;
+  border-radius:999px;
+  background:#EEF6E8;
+  color:#3B6D11;
+  font-size:12px;
+  font-weight:600;
+}
+
+.tabs{
+  justify-content:center;
+}
+
+.danmaku-wrap{
+  background:#FFFFFF;
+  border-color:#EBD4C7;
+  box-shadow:0 8px 22px rgba(113,43,19,.06);
+}
+
+.swipe-hint{
+  width:max-content;
+  max-width:100%;
+  margin:0 auto .85rem;
+  padding:6px 12px;
+  border-radius:999px;
+  background:#FFFFFF;
+  border:1px solid #F1D5C8;
+  color:#712B13;
+  box-shadow:0 6px 18px rgba(113,43,19,.08);
+}
+
+.swipe-hint-arrow{
+  color:#5A8F38;
+  font-weight:700;
+}
+
+.deck-area{
+  margin:0 -.15rem 1.15rem;
+  padding:13px 10px 12px;
+  border-radius:20px;
+  background:linear-gradient(180deg,#FFFFFF 0%,#FFF4ED 100%);
+  border:1px solid #F0C8B8;
+  box-shadow:0 18px 44px rgba(216,90,48,.13);
+}
+
+.deck-container{
+  height:342px;
+}
+
+.deck-ghost{
+  background:#FFFFFF;
+  border-color:#F0C8B8;
+}
+
+.deck-top{
+  min-height:318px;
+  background:linear-gradient(180deg,#FFFFFF 0%,#FFFCF7 100%);
+  border:1px solid #EFAF91;
+  box-shadow:0 22px 52px rgba(216,90,48,.18),0 5px 16px rgba(24,95,165,.08);
+}
+
+.deck-top::after{
+  content:'';
+  position:absolute;
+  left:24%;
+  right:24%;
+  top:0;
+  height:3px;
+  border-radius:0 0 999px 999px;
+  background:linear-gradient(90deg,#5A8F38,#D85A30,#185FA5);
+  pointer-events:none;
+}
+
+.shop-name{
+  font-size:24px;
+}
+
+.product-pill{
+  background:#FFF2E8;
+  border-color:#EFAF91;
+}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="hero">
-    <div class="hero-title">今天吃啥？🍜</div>
-    <div class="hero-sub">之我在北语吃什么</div>
+    <div class="hero-title">今天吃什么？</div>
+    <div class="hero-sub">之今天也要好好吃饭</div>
   </div>
 
   <div class="tabs">
