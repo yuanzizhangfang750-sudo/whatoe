@@ -652,9 +652,9 @@ function subscribeRealtime(){
 }
 
 async function init(){
-  await initAuth();
   await loadShops();
   subscribeRealtime();
+  initAuth().catch(console.error);
 }
 init();
 </script>
